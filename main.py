@@ -23,19 +23,20 @@ class simultation():
         self.tau_value = tau_value # time delay in reactoin
         self.b_value = b_value # distance esstimation bias in meters
 
+        # other variables 
+        self.epsilon = 0.0001 # the small value 
+        self.delta_t = 0.01 # second in simulation per compute step
+        self.sim_length = sim_length # length of simulation
+
         self.n = n # number of carss
         self.V_max = torch.ones(n)*self.V_max_value # maximum velocity of individual cars
         self.D_critical = torch.ones(n)*self.D_critical_value # critical distance of individual cars
         self.L = torch.ones(n)*self.L_value # length of individual cars
         self.tau = torch.ones(n)*self.tau_value # time delay of reaction for individual cars
         self.b = torch.ones(n)*self.b_value # distance estimation bias for individual cars
-        self.C = self.V_max / torch.log(self.D_critical/self.L) # the constant coefficient 
+        self.C = self.V_max / (torch.log(self.D_critical/self.L)+self.epsilon) # the constant coefficient 
         self.last_V = torch.ones(n)*self.V_max_value # place holder 
 
-        # other variables 
-        self.epsilon = 0.0001 # the small value 
-        self.delta_t = 0.01 # second in simulation per compute step
-        self.sim_length = sim_length # length of simulation
 
         # initializing simulation variables
         self.X = (self.epsilon+self.D_critical+self.L)*torch.tensor([i for i in range(n)])
@@ -59,7 +60,7 @@ class simultation():
         batch_indices = torch.arange(self.n) # index for each car 
 
         # compute V: the future velocity according to the current D
-        future_V = self.C * torch.log((self.D-self.b)/(self.L+ self.epsilon))
+        future_V = self.C * torch.log((self.D-self.b)/(self.L))
         future_V = torch.where(self.D < self.L + self.epsilon, torch.tensor(0.0, device=self.D.device), future_V)  # Set to 0 if D < lower_bound
         future_V = torch.where(self.D > self.D_critical - self.epsilon, self.V_max, future_V)  # Set to 1 if D > upper_bound
         future_V[-1] = self.last_V[future_index[-1]] # speed of the last car is free to choose from.
